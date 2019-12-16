@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
+.gcp_credentials.json
+.gcp_project_id
+.sendgrid_key
+reminders.yaml
+virtualenv/

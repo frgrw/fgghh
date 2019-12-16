@@ -1,0 +1,10 @@
+from: reminders@example.com
+# https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+timezone: America/Los_Angeles
+recipients:
+  - to: user@example.com
+    reminders:
+      - subject: Reminder to do the thing
+        html_content: Details about the thing
+        # https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules
+        schedule: 0 0 * * *

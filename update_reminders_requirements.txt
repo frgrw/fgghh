@@ -1,0 +1,2 @@
+google-cloud-scheduler>=1.2.1,<2.0
+PyYAML>=5.2,<6.0

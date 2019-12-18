@@ -34,7 +34,7 @@ def email_cloud_function(event, context):
             return "Skipped"
 
     event_timestamp = parser.parse(context.timestamp)
-    event_age = (datetime.datetime.utcnow() - event_timestamp).total_seconds()
+    event_age = (datetime.datetime.now(datetime.timezone.utc) - event_timestamp).total_seconds()
     if event_age > RETRY_TIMEOUT:
         print('Dropped event {} ({}sec old)'.format(context.event_id, event_age))
         return 'Timeout'

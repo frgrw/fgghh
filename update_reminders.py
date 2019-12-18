@@ -6,6 +6,8 @@ import hashlib
 from google.cloud.scheduler_v1 import CloudSchedulerClient
 from google.cloud.scheduler_v1.types import Job, PubsubTarget
 
+from util import parse_schedule
+
 PROJECT = open('.gcp_project_id').read().strip()
 REGION = open('.gcp_location').read().strip()
 TOPIC = 'reminders-topic'
@@ -43,10 +45,13 @@ with open('reminders.yaml', 'r') as f:
     config = yaml.safe_load(f)
     for recipient in config['recipients']:
         for reminder in recipient['reminders']:
+            cron, extra_schedule = parse_schedule(reminder['schedule'])
             payload = {'from': config['from'],
                        'to': recipient['to'],
                        'subject': reminder['subject'],
                        'html_content': reminder.get('html_content')}
+            if extra_schedule:
+                payload['schedule'] = extra_schedule
             data = json.dumps(payload).encode('utf-8')
             target = PubsubTarget(topic_name=f'projects/{PROJECT}/topics/{TOPIC}', data=data)
             hasher = hashlib.sha1()
@@ -55,7 +60,7 @@ with open('reminders.yaml', 'r') as f:
             job = Job(
                 name=safe_job_name(recipient['to'], reminder['subject'], hash),
                 pubsub_target=target,
-                schedule=reminder['schedule'],
+                schedule=cron,
                 time_zone=config['timezone'])
 
             try:

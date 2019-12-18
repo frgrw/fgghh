@@ -11,4 +11,3 @@ Setup:
 
 TODO:
 * Retries
-* Every N days

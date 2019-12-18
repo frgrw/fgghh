@@ -1,8 +1,7 @@
-update_reminders:
-	python3 -m venv virtualenv
+update_reminders: virtualenv
 	GOOGLE_APPLICATION_CREDENTIALS=".gcp_credentials.json" bash ./update_reminders.sh
 
-deploy:
+deploy: test
 	gcloud functions deploy email_cloud_function \
 	 --runtime python37 \
 	 --trigger-topic reminders-topic \
@@ -17,3 +16,9 @@ setup:
 	gcloud projects add-iam-policy-binding $(shell cat .gcp_project_id) \
       --member serviceAccount:reminders-service-account@$(shell cat .gcp_project_id).iam.gserviceaccount.com \
       --role roles/cloudscheduler.admin
+
+virtualenv:
+	python3 -m venv virtualenv
+
+test: virtualenv
+	bash ./test.sh

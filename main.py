@@ -1,14 +1,35 @@
 import base64
+import datetime
 import json
 import os
+from dateutil import parser
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+
+def check_schedule(start_date: datetime.date, event_date: datetime.date, frequency_days: int) -> bool:
+    if event_date < start_date:
+        return False
+
+    if (event_date - start_date).days % frequency_days != 0:
+        return False
+
+    return True
 
 
 def email_cloud_function(event, context):
     # Messages in pubsub are base64 encoded. Also support events with the keys directly in them, to make testing easier
     if 'data' in event:
         event = json.loads(base64.b64decode(event['data']).decode('utf-8'))
+
+    if 'schedule' in event:
+        schedule = event['schedule']
+        assert schedule['unit'] == 'day'
+        start_date = datetime.date.fromisoformat(schedule['start'])
+        event_date = parser.parse(context.timestamp).date()
+        if not check_schedule(start_date, event_date, schedule['frequency']):
+            return "Skipped"
+
     message = Mail(
         from_email=event['from'],
         to_emails=event['to'],

@@ -7,6 +7,9 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 
+RETRY_TIMEOUT = 24*60*60
+
+
 def check_schedule(start_date: datetime.date, event_date: datetime.date, frequency_days: int) -> bool:
     if event_date < start_date:
         return False
@@ -29,6 +32,12 @@ def email_cloud_function(event, context):
         event_date = parser.parse(context.timestamp).date()
         if not check_schedule(start_date, event_date, schedule['frequency']):
             return "Skipped"
+
+    event_timestamp = parser.parse(context.timestamp)
+    event_age = (datetime.datetime.utcnow() - event_timestamp).total_seconds()
+    if event_age > RETRY_TIMEOUT:
+        print('Dropped event {} ({}sec old)'.format(context.event_id, event_age))
+        return 'Timeout'
 
     message = Mail(
         from_email=event['from'],

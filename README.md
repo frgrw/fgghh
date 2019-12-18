@@ -8,6 +8,3 @@ Setup:
 * `make setup`
 * `make deploy`
 * `make update_reminders`
-
-TODO:
-* Retries

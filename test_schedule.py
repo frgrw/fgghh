@@ -3,7 +3,7 @@ import unittest
 from dateutil import parser, tz
 
 from main import check_schedule
-from util import parse_schedule
+from update_reminders import parse_schedule
 
 
 class ScheduleTestCase(unittest.TestCase):

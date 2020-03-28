@@ -68,6 +68,7 @@ def read_reminders(client: CloudSchedulerClient) -> typing.MutableMapping[str, J
                 target = PubsubTarget(topic_name=f'projects/{PROJECT}/topics/{TOPIC}', data=data)
                 hasher = hashlib.sha1()
                 hasher.update(data)
+                hasher.update(cron.encode('utf-8'))
                 hash = hasher.hexdigest()
                 job_name = safe_job_name(recipient['to'], reminder['subject'], hash, client)
                 job = Job(

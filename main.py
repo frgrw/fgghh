@@ -10,7 +10,7 @@ from sendgrid.helpers.mail import Mail
 RETRY_TIMEOUT = 24*60*60
 
 
-def check_schedule(start_date: datetime.date, event_date: datetime.date, frequency_days: int) -> bool:
+def check_ndays_schedule(start_date: datetime.date, event_date: datetime.date, frequency_days: int) -> bool:
     if event_date < start_date:
         return False
 
@@ -20,17 +20,26 @@ def check_schedule(start_date: datetime.date, event_date: datetime.date, frequen
     return True
 
 
+def check_day_of_week(event_date: datetime.date, day_of_week: int) -> bool:
+    return event_date.isoweekday() == day_of_week
+
+
 def email_cloud_function(event, context):
     # Messages in pubsub are base64 encoded. Also support events with the keys directly in them, to make testing easier
     if 'data' in event:
         event = json.loads(base64.b64decode(event['data']).decode('utf-8'))
+
+    if 'required_day_of_week' in event:
+        event_date = parser.parse(context.timestamp).date()
+        if not check_day_of_week(event_date, event['required_day_of_week']):
+            return "Skipped"
 
     if 'schedule' in event:
         schedule = event['schedule']
         assert schedule['unit'] == 'day'
         start_date = datetime.date.fromisoformat(schedule['start'])
         event_date = parser.parse(context.timestamp).date()
-        if not check_schedule(start_date, event_date, schedule['frequency']):
+        if not check_ndays_schedule(start_date, event_date, schedule['frequency']):
             return "Skipped"
 
     event_timestamp = parser.parse(context.timestamp)

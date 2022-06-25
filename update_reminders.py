@@ -34,21 +34,61 @@ def safe_job_name(to: str, subject: str, hash: str, client: CloudSchedulerClient
     return client.job_path(PROJECT, REGION, job_name)
 
 
-def parse_schedule(schedule: str) -> (str, dict):
-    if not schedule.startswith('starting'):
-        return schedule, {}
+def parse_schedule(schedule: str) -> (str, dict, typing.Optional[int]):
+    if schedule.startswith('starting'):
+        match = re.match(r'starting\s+(?P<start>.+)\s+every\s+(?P<days>[0-9]{1,2})\s+days\s+at\s+(?P<hours>[0-9]{1,2}):(?P<minutes>[0-9]{2})', schedule)
+        start = match.group('start')
+        days = int(match.group('days'))
+        hours = int(match.group('hours'))
+        minutes = int(match.group('minutes'))
 
-    match = re.match(r'starting\s+(?P<start>.+)\s+every\s+(?P<days>[0-9]{1,2})\s+days\s+at\s+(?P<hours>[0-9]{1,2}):(?P<minutes>[0-9]{2})', schedule)
-    start = match.group('start')
-    days = int(match.group('days'))
-    hours = int(match.group('hours'))
-    minutes = int(match.group('minutes'))
+        start_date = parser.parse(start).date().isoformat()
 
-    start_date = parser.parse(start).date().isoformat()
+        cron = f'{minutes} {hours} * * *'
 
-    cron = f'{minutes} {hours} * * *'
+        return cron, {'start': start_date, 'frequency': days, 'unit': 'day'}, None
 
-    return cron, {'start': start_date, 'frequency': days, 'unit': 'day'}
+    if schedule.startswith('on'):
+        match = re.match(r'on\s+(?P<ordinal>[a-zA-Z1-5]+)\s+(?P<dayofweek>[a-zA-Z]{3,4})\s+in\s+(?P<month>[a-zA-Z]{3,4})\s+at\s+(?P<hours>[0-9]{1,2}):(?P<minutes>[0-9]{2})', schedule)
+        ordinal = match.group('ordinal')
+        day_of_week = match.group('dayofweek').lower()
+        month = parser.parse(match.group('month')).month
+        hours = int(match.group('hours'))
+        minutes = int(match.group('minutes'))
+
+        if ordinal == '1st':
+            day_range = '1-7'
+        elif ordinal == '2nd':
+            day_range = '8-14'
+        elif ordinal == '3rd':
+            day_range = '9-21'
+        elif ordinal == '4th':
+            day_range = '22-28'
+        else:
+            raise Exception("unsupported ordinal: " + ordinal)
+
+        cron = f'{minutes} {hours} {day_range} {month} *'
+
+        if day_of_week.startswith('mon'):
+            day_of_week = 1
+        elif day_of_week.startswith('tue'):
+            day_of_week = 2
+        elif day_of_week.startswith('wed'):
+            day_of_week = 3
+        elif day_of_week.startswith('thu'):
+            day_of_week = 4
+        elif day_of_week.startswith('fri'):
+            day_of_week = 5
+        elif day_of_week.startswith('sat'):
+            day_of_week = 6
+        elif day_of_week.startswith('sun'):
+            day_of_week = 7
+        else:
+            raise Exception("unsupported day of week: " + day_of_week)
+
+        return cron, {}, day_of_week
+
+    return schedule, {}, None
 
 
 def read_reminders(client: CloudSchedulerClient) -> typing.MutableMapping[str, Job]:
@@ -57,13 +97,15 @@ def read_reminders(client: CloudSchedulerClient) -> typing.MutableMapping[str, J
         config = yaml.safe_load(f)
         for recipient in config['recipients']:
             for reminder in recipient['reminders']:
-                cron, extra_schedule = parse_schedule(reminder['schedule'])
+                cron, extra_schedule, day_of_week = parse_schedule(reminder['schedule'])
                 payload = {'from': config['from'],
                            'to': recipient['to'],
                            'subject': reminder['subject'],
                            'html_content': reminder.get('html_content')}
                 if extra_schedule:
                     payload['schedule'] = extra_schedule
+                if day_of_week is not None:
+                    payload['required_day_of_week'] = day_of_week
                 data = json.dumps(payload).encode('utf-8')
                 target = PubsubTarget(topic_name=f'projects/{PROJECT}/topics/{TOPIC}', data=data)
                 hasher = hashlib.sha1()

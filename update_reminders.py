@@ -36,7 +36,7 @@ def safe_job_name(to: str, subject: str, hash: str, client: CloudSchedulerClient
 
 def parse_schedule(schedule: str) -> (str, dict, typing.Optional[int]):
     if schedule.startswith('starting'):
-        match = re.match(r'starting\s+(?P<start>.+)\s+every\s+(?P<days>[0-9]{1,2})\s+days\s+at\s+(?P<hours>[0-9]{1,2}):(?P<minutes>[0-9]{2})', schedule)
+        match = re.match(r'starting\s+(?P<start>.+)\s+every\s+(?P<days>[0-9]{1,3})\s+days\s+at\s+(?P<hours>[0-9]{1,2}):(?P<minutes>[0-9]{2})', schedule)
         start = match.group('start')
         days = int(match.group('days'))
         hours = int(match.group('hours'))
